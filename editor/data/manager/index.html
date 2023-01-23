@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exif Metadata Editor</title>
+  <link rel="stylesheet" type="text/css" href="index.css">
+</head>
+<body class="empty">
+  <template id="entry">
+    <div class="entry">
+      <h2>
+        <span>Title</span>
+        <input type="button" value="Delete" data-cmd="delete">
+        <input type="button" value="Remove Writable Tags" data-cmd="remove-all">
+        <input type="button" value="Save" data-cmd="save" disabled>
+      </h2>
+      <div class="tags"></div>
+    </div>
+  </template>
+  <template id="tag">
+    <div class="tag">
+      <span>Tag</span>
+      <span class="value">Value</span>
+      <input type="button" value="Remove" data-cmd="remove">
+    </div>
+  </template>
+
+  <header>
+    <label>
+      <span>Drop Files or Click to Add</span>
+      <input type="file" multiple id="input">
+    </label>
+    <span id="blink"></span>
+    <span id="files"></span>
+    <span id="status">booting</span>
+  </header>
+  <div id="entries"></div>
+  <pre id="log">Booting...
+</pre>
+
+  <script type="text/javascript" src="index.js"></script>
+  <script type="text/javascript" src="jslinux/base.js"></script>
+  <script type="text/javascript" src="jslinux/x86emu-wasm.js"></script>
+  <script type="text/javascript" src="ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+https://exiftool.org/Image-ExifTool-12.55.tar.gz
+
+
+# convert to ext2 disk
+
+dd if=/dev/zero of=./disk.ext2 bs=1024 count=16000
+mkfs.ext2 ./disk.ext2
+
+mount disk.ext2 dir
+move File dir
+move Image dir
+umount dir

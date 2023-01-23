@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="index.css">
+  <title>Metadata Viewer</title>
+</head>
+<body>
+  <input type="file" id="input" multiple>
+
+  <template id="group">
+    <details class="group" open>
+      <summary></summary>
+      <div class="tags"></div>
+    </details>
+  </template>
+  <template id="tag">
+    <div class="tag">
+      <span>Name</span>
+      <span>Value</span>
+      <span>Writable</span>
+    </div>
+  </template>
+  <template id="file">
+    <div class="file">
+      <h2>Filename</h2>
+      <div class="groups"></div>
+    </div>
+  </template>
+
+  <div id="files"></div>
+
+  <script type="text/javascript" src="webperl/webperl.js"></script>
+  <script type="text/javascript" src="ExifTool.js"></script>
+  <script type="text/javascript" src="index.js"></script>
+</body>
+</html>

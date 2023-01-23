@@ -1,0 +1,63 @@
+:root {
+  --green: #b7fffb;
+  --dark-one: #e4e4e4;
+  --gap: 10px;
+}
+
+html {
+  height: 100vh;
+}
+body {
+  font-size: 13px;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+input[type=file] {
+  display: none;
+}
+h2 {
+  background-color: var(--green);
+  padding: var(--gap);
+  text-align: center;
+}
+
+#files:empty::before {
+  content: 'Double-Click to add files or drop them to the view';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  font-size: 1.5rem;
+  overflow: hidden;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: min-content 1fr min-content;
+  grid-gap: var(--gap);
+}
+.group {
+  display: contents;
+}
+.group summary {
+  grid-column: 1/4;
+  background-color: var(--dark-one);
+  padding-block: var(--gap);
+  padding-left: var(--gap);
+}
+.tags {
+  display: contents;
+}
+.tags :nth-child(1n) {
+  white-space: nowrap;
+  padding-left: var(--gap);
+}
+.tags :nth-child(3n) {
+  justify-self: end;
+  padding-right: var(--gap);
+}
+.tag {
+  display: contents;
+}
+.tag:hover {
+  color: blue;
+}

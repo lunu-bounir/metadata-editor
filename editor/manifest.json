@@ -1,0 +1,31 @@
+{
+  "name": "Exif Metadata Editor",
+  "description": "Read, write and edit meta information of audio, video, image, PDF, and many more files (powered by ExifTool)",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "permissions": ["tabs"],
+  "background": {
+    "service_worker": "worker.js"
+  },
+  "host_permissions": [
+    "https://vfsync.org/u/os/buildroot-x86-2/"
+  ],
+  "action": {
+    "default_title": "Open the Metadata Editor"
+  },
+  "icons": {
+    "16": "data/icons/16.png",
+    "32": "data/icons/32.png",
+    "48": "data/icons/48.png",
+    "64": "data/icons/64.png",
+    "128": "data/icons/128.png",
+    "256": "data/icons/256.png",
+    "512": "data/icons/512.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "commands": {
+    "_execute_action": {}
+  }
+}
