@@ -91,11 +91,16 @@ const insert = (file, groups) => {
   document.getElementById('files').append(ef);
 };
 
-document.getElementById('input').onchange = async e => {
-  for (const file of e.target.files) {
+const next = async files => {
+  document.getElementById('files').dataset.msg = 'Please wait while loading resources...';
+  for (const file of files) {
     const meta = await explore(file);
     insert(file, meta);
   }
+};
+
+document.getElementById('input').onchange = e => {
+  next(e.target.files);
 };
 document.addEventListener('click', e => {
   if (e.detail === 1) {
@@ -107,10 +112,7 @@ document.addEventListener('click', e => {
   document.getElementById('input').click();
 });
 document.ondragover = e => e.preventDefault();
-document.ondrop = async e => {
+document.ondrop = e => {
   e.preventDefault();
-  for (const file of e.dataTransfer.files) {
-    const meta = await explore(file);
-    insert(file, meta);
-  }
+  next(e.dataTransfer.files);
 };
