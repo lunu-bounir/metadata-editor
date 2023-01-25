@@ -21,13 +21,17 @@ h2 {
 }
 
 #files:empty::before {
-  content: 'Double-Click to add files or drop them to the view';
+  content: attr(data-msg);
   position: absolute;
   inset: 0;
   display: grid;
   place-content: center;
-  font-size: 1.5rem;
+  font-size: max(1rem, min(4vw, 1.5rem));
   overflow: hidden;
+  background-color: #fffbf3;
+  padding: 10px;
+  text-align: center;
+  white-space: pre-wrap;
 }
 
 .groups {
@@ -43,13 +47,17 @@ h2 {
   background-color: var(--dark-one);
   padding-block: var(--gap);
   padding-left: var(--gap);
+  user-select: none;
 }
 .tags {
   display: contents;
 }
-.tags :nth-child(1n) {
+.tags :nth-child(3n - 2) {
   white-space: nowrap;
   padding-left: var(--gap);
+}
+.tags :nth-child(3n - 1) {
+  white-space: break-spaces;
 }
 .tags :nth-child(3n) {
   justify-self: end;
@@ -60,4 +68,16 @@ h2 {
 }
 .tag:hover {
   color: blue;
+}
+
+@media screen and (max-width: 500px) {
+  .groups {
+    grid-template-columns: min-content 1fr;
+  }
+  .group summary {
+    grid-column: 1/3;
+  }
+  .tags :nth-child(3n) {
+    display: none;
+  }
 }

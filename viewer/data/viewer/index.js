@@ -5,7 +5,7 @@
 const exiftool = new ExifTool();
 exiftool.ready().then(() => {
   const version = exiftool.execute('Image::ExifTool->VERSION');
-  document.title += ' (ExifTool ' + version + ')';
+  document.getElementById('files').dataset.msg += '\n\n' + '(ExifTool ' + version + ')';
 });
 
 const explore = file => exiftool.ready().then(async () => {
@@ -70,7 +70,7 @@ const insert = (file, groups) => {
 
   for (const [group, {writable, tags}] of groups.entries()) {
     const eg = document.importNode(document.getElementById('group').content, true);
-    eg.querySelector('summary').textContent = group + (writable ? ' (writable)' : '');
+    eg.querySelector('summary').textContent = group + (writable ? '' : ' (readonly)');
 
     for (const [tag, {writable, name, value}] of tags.entries()) {
       // ignore the "FileSize", "FilePermissions" and "Directory" Tag of the "File" group
@@ -97,7 +97,15 @@ document.getElementById('input').onchange = async e => {
     insert(file, meta);
   }
 };
-document.addEventListener('click', e => e.detail === 2 && document.getElementById('input').click());
+document.addEventListener('click', e => {
+  if (e.detail === 1) {
+    return;
+  }
+  if (e.target.tagName === 'SUMMARY') {
+    return;
+  }
+  document.getElementById('input').click();
+});
 document.ondragover = e => e.preventDefault();
 document.ondrop = async e => {
   e.preventDefault();

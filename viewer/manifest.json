@@ -1,9 +1,12 @@
 {
   "name": "Exif Metadata Viewer",
   "description": "Read meta information of audio, video, image, PDF, and many more files (powered by ExifTool)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "manifest_version": 3,
-  "permissions": ["tabs"],
+  "permissions": [
+    "storage"
+  ],
+  "homepage_url": "https://webextension.org/listing/metadata-viewer.html",
   "background": {
     "service_worker": "worker.js"
   },
