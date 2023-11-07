@@ -3,17 +3,17 @@
 // exiftool -listw && exiftool -listd
 
 const exiftool = new ExifTool();
-exiftool.ready().then(() => {
-  const version = exiftool.execute('Image::ExifTool->VERSION');
-  document.getElementById('files').dataset.msg += '\n\n' + '(ExifTool ' + version + ')';
+exiftool.ready().then(async () => {
+  const version = await exiftool.execute('Image::ExifTool->VERSION');
+
+  document.getElementById('files').dataset.msg =
+    document.getElementById('files').dataset.msg.slice(0, -3) + 'Based on ExifTool v.' + version;
 });
 
 const explore = file => exiftool.ready().then(async () => {
-  await exiftool.upload(file);
-
-  const r = exiftool.execute(`
+  const raw = await exiftool.execute(`
     my $exifTool = Image::ExifTool->new;
-    $exifTool->ExtractInfo("/home/${file.name}");
+    $exifTool->ExtractInfo("/work/${file.name}");
     my @groups = $exifTool->GetGroups();
 
     my @r = ();
@@ -30,7 +30,8 @@ const explore = file => exiftool.ready().then(async () => {
       }
     }
     return join('|||', @r);
-  `).split('|||');
+  `);
+  const r = raw.split('|||');
 
   const {deletableGroups, writableTags} = await fetch('const.json').then(r => r.json());
 
@@ -54,7 +55,6 @@ const explore = file => exiftool.ready().then(async () => {
       });
     }
   }
-  exiftool.delete(file);
   return groups;
 }).catch(e => {
   console.error(e);
@@ -69,6 +69,10 @@ const insert = (file, groups) => {
   ef.querySelector('h2').textContent = file.name;
 
   for (const [group, {writable, tags}] of groups.entries()) {
+    if (group === 'ExifTool') {
+      continue;
+    }
+
     const eg = document.importNode(document.getElementById('group').content, true);
     eg.querySelector('summary').textContent = group + (writable ? '' : ' (readonly)');
 
@@ -93,10 +97,13 @@ const insert = (file, groups) => {
 
 const next = async files => {
   document.getElementById('files').dataset.msg = 'Please wait while loading resources...';
+
+  await exiftool.upload(files);
   for (const file of files) {
     const meta = await explore(file);
     insert(file, meta);
   }
+  await exiftool.umount();
 };
 
 document.getElementById('input').onchange = e => {
