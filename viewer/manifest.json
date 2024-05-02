@@ -6,6 +6,12 @@
   "permissions": [
     "storage"
   ],
+  "optional_permissions": [
+    "contextMenus"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
   "homepage_url": "https://webextension.org/listing/metadata-viewer.html",
   "background": {
     "service_worker": "worker.js"
@@ -21,6 +27,9 @@
     "128": "data/icons/128.png",
     "256": "data/icons/256.png",
     "512": "data/icons/512.png"
+  },
+  "options_ui": {
+    "page": "/data/options/index.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"

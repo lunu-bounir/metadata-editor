@@ -28,7 +28,10 @@ XMLHttpRequest.prototype.open = new Proxy(XMLHttpRequest.prototype.open, {
 self.importScripts('webperl/webperl.js');
 
 Perl.init(() => {
-  for (const name of ['/work', '/ExifTool', '/ExifTool/Image', '/ExifTool/Image/ExifTool', '/ExifTool/Image/ExifTool/Lang', '/ExifTool/Image/ExifTool/Charset', '/ExifTool/File']) {
+  for (const name of [
+    '/work', '/ExifTool', '/ExifTool/Image', '/ExifTool/Image/ExifTool', '/ExifTool/Image/ExifTool/Lang',
+    '/ExifTool/Image/ExifTool/Charset', '/ExifTool/File'
+  ]) {
     FS.mkdir(name);
   }
 
@@ -278,7 +281,7 @@ Perl.init(() => {
   });
 });
 
-self.onmessage = e => {
+self.onmessage = async e => {
   const request = e.data;
 
   if (request.cmd === 'execute') {
@@ -288,18 +291,48 @@ self.onmessage = e => {
     });
   }
   else if (request.cmd === 'upload') {
-    // console.log(FS.analyzePath('/work'));
-    if (FS.analyzePath('/work').object?.mount?.mountpoint === '/work') {
-      FS.unmount('/work');
-    }
-    FS.mount(WORKERFS, {
-      files: request.files
-    }, '/work');
+    try {
+      // console.log(FS.analyzePath('/work'));
+      if (FS.analyzePath('/work').object?.mount?.mountpoint === '/work') {
+        FS.unmount('/work');
+      }
 
-    self.postMessage({
-      id: request.id,
-      response: true
-    });
+      const blobs = [];
+      const files = [];
+      for (const file of request.files) {
+        if (file.type === 'remote') {
+          const r = await fetch(file.href).catch(e => {
+            throw Error(e.message + ': ' + file.href);
+          });
+          const data = await r.blob();
+          blobs.push({
+            name: file.name,
+            data
+          });
+        }
+        else {
+          files.push(file);
+        }
+      }
+
+      FS.mount(WORKERFS, {
+        blobs,
+        files
+      }, '/work');
+
+      self.postMessage({
+        id: request.id,
+        response: true
+      });
+    }
+    catch (e) {
+      console.log(e);
+
+      self.postMessage({
+        id: request.id,
+        response: e.message
+      });
+    }
   }
   else if (request.cmd === 'umount') {
     FS.unmount('/work');

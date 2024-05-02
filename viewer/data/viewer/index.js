@@ -2,13 +2,8 @@
 
 // exiftool -listw && exiftool -listd
 
+const args = new URLSearchParams(location.search);
 const exiftool = new ExifTool();
-exiftool.ready().then(async () => {
-  const version = await exiftool.execute('Image::ExifTool->VERSION');
-
-  document.getElementById('files').dataset.msg =
-    document.getElementById('files').dataset.msg.slice(0, -3) + 'Based on ExifTool v.' + version;
-});
 
 const explore = file => exiftool.ready().then(async () => {
   const raw = await exiftool.execute(`
@@ -98,12 +93,17 @@ const insert = (file, groups) => {
 const next = async files => {
   document.getElementById('files').dataset.msg = 'Please wait while loading resources...';
 
-  await exiftool.upload(files);
-  for (const file of files) {
-    const meta = await explore(file);
-    insert(file, meta);
+  const v = await exiftool.upload(files);
+  if (v === true) {
+    for (const file of files) {
+      const meta = await explore(file);
+      insert(file, meta);
+    }
+    await exiftool.umount();
   }
-  await exiftool.umount();
+  else {
+    alert('Something went wrong: ' + v);
+  }
 };
 
 document.getElementById('input').onchange = e => {
@@ -123,3 +123,23 @@ document.ondrop = e => {
   e.preventDefault();
   next(e.dataTransfer.files);
 };
+
+exiftool.ready().then(async () => {
+  if (args.has('href')) {
+    const files = args.getAll('href').map(href => {
+      const name = href.split('/').pop() || (Math.random() + 1).toString(36).substring(7);
+      return {
+        name,
+        type: 'remote',
+        href
+      };
+    });
+    next(files);
+  }
+  else {
+    const version = await exiftool.execute('Image::ExifTool->VERSION');
+
+    document.getElementById('files').dataset.msg =
+      document.getElementById('files').dataset.msg.slice(0, -3) + 'Based on ExifTool v.' + version;
+  }
+});

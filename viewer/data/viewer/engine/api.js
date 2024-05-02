@@ -5,6 +5,7 @@ worker.onmessage = e => {
 
   if (request.cmd === 'ready') {
     worker.ready = true;
+
     for (const c of worker.onReady) {
       c();
     }
