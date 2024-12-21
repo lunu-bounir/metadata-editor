@@ -1,4 +1,3 @@
-
 const worker = new Worker('engine/worker.js');
 worker.onmessage = e => {
   const request = e.data;

@@ -1,13 +1,16 @@
 const icm = document.getElementById('image-context-menu');
+const lcm = document.getElementById('link-context-menu');
 const toast = document.getElementById('toast');
 
 chrome.storage.local.get({
-  'image-context-menu': false
+  'image-context-menu': false,
+  'link-context-menu': false
 }, prefs => {
   icm.checked = prefs['image-context-menu'];
+  lcm.checked = prefs['link-context-menu'];
 });
 
-icm.onchange = e => {
+lcm.onchange = icm.onchange = e => {
   if (e.target.checked) {
     chrome.permissions.request({
       permissions: ['contextMenus'],
@@ -15,6 +18,7 @@ icm.onchange = e => {
     }, granted => {
       if (!granted) {
         icm.checked = false;
+        lcm.checked = false;
       }
     });
   }
@@ -30,16 +34,17 @@ const notify = message => {
 };
 
 document.getElementById('save').onclick = e => chrome.storage.local.set({
-  'image-context-menu': icm.checked
+  'image-context-menu': icm.checked,
+  'link-context-menu': lcm.checked
 }, () => {
-  if (icm.checked === false) {
+  if (icm.checked === false && lcm.checked === false) {
     // wait for context menu to get removed
     setTimeout(() => {
       chrome.permissions.remove({
         permissions: ['contextMenus'],
         origins: ['*://*/*']
       }, () => notify('Options saved'));
-    }, 1000);
+    }, 750);
   }
   else {
     notify('Options saved');

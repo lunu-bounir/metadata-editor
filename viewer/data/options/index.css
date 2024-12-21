@@ -1,5 +1,5 @@
 body {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
   background-color: #fff;
   color: #4d5156;
   width: min(100% - 2rem, 70rem);
@@ -36,5 +36,6 @@ a:visited {
 
 .two {
   display: grid;
-  grid-template-columns: 1fr min-content;
+  grid-template-columns: min-content 1fr;
+  grid-gap: 10px 5px;
 }

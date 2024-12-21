@@ -15,7 +15,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.10';
+$VERSION = '1.11';
 
 sub WritePhaseOne($$$);
 sub ProcessPhaseOne($$$);
@@ -71,6 +71,7 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
         # >2 = compressed
         # 5 = non-linear
         PrintConv => { #PH
+            0 => 'Uncompressed', #https://github.com/darktable-org/darktable/issues/7308
             1 => 'RAW 1', #? (encrypted)
             2 => 'RAW 2', #? (encrypted)
             3 => 'IIQ L', # (now "L14", ref IB)
@@ -449,7 +450,7 @@ sub WritePhaseOne($$$)
 
     return undef if $dirLen < 12;
     unless ($$tagTablePtr{VARS} and $$tagTablePtr{VARS}{ENTRY_SIZE}) {
-        $et->WarnOnce("No ENTRY_SIZE for $$tagTablePtr{TABLE_NAME}");
+        $et->Warn("No ENTRY_SIZE for $$tagTablePtr{TABLE_NAME}");
         return undef;
     }
     my $entrySize = $$tagTablePtr{VARS}{ENTRY_SIZE};
@@ -590,7 +591,7 @@ sub ProcessPhaseOne($$$)
 
     return 0 if $dirLen < 12;
     unless ($$tagTablePtr{VARS} and $$tagTablePtr{VARS}{ENTRY_SIZE}) {
-        $et->WarnOnce("No ENTRY_SIZE for $$tagTablePtr{TABLE_NAME}");
+        $et->Warn("No ENTRY_SIZE for $$tagTablePtr{TABLE_NAME}");
         return undef;
     }
     my $entrySize = $$tagTablePtr{VARS}{ENTRY_SIZE};
@@ -631,7 +632,7 @@ sub ProcessPhaseOne($$$)
             $formatSize = Get32u($dataPt, $entry+4);
             $formatStr = $formatName[$formatSize];
             unless ($formatStr) {
-                $et->WarnOnce("Unrecognized $ifdType format size $formatSize",1);
+                $et->Warn("Unrecognized $ifdType format size $formatSize",1);
                 $formatSize = 1;
                 $formatStr = 'undef';
             }

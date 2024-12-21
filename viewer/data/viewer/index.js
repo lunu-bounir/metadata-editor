@@ -80,8 +80,11 @@ const insert = (file, groups) => {
       const et = document.importNode(document.getElementById('tag').content, true);
       const [en, ev, ew] = et.querySelectorAll('span');
       en.textContent = name;
+      en.classList.add('d1');
       ev.textContent = value;
+      ev.classList.add('d2');
       ew.textContent = writable ? '' : '(readonly)';
+      ew.classList.add('d3');
       et.querySelector('div').dataset.tag = tag;
       eg.querySelector('div').append(et);
     }

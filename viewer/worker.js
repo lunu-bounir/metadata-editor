@@ -35,29 +35,52 @@ chrome.action.onClicked.addListener(tab => {
 });
 
 chrome.storage.onChanged.addListener(ps => {
-  if ('image-context-menu' in ps) {
+  if ('image-context-menu' in ps || 'link-context-menu' in ps) {
     build();
   }
 });
 const onClicked = (info, tab) => {
-  if (info.menuItemId === 'inspect') {
+  if (info.menuItemId === 'inspect-image') {
     open(tab, info.srcUrl);
   }
+  else if (info.menuItemId === 'inspect-link') {
+    open(tab, info.linkUrl);
+  }
 };
+if (chrome.contextMenus) {
+  chrome.contextMenus.onClicked.addListener(onClicked);
+}
+
 const build = () => chrome.storage.local.get({
-  'image-context-menu': false
+  'image-context-menu': false,
+  'link-context-menu': false
 }, prefs => {
   if (prefs['image-context-menu']) {
     chrome.contextMenus.create({
-      title: 'Inspect Metadata',
-      id: 'inspect',
+      title: 'Inspect Metadata (image)',
+      id: 'inspect-image',
       contexts: ['image']
     }, () => chrome.runtime.lastError);
+
+    chrome.contextMenus.onClicked.removeListener(onClicked);
     chrome.contextMenus.onClicked.addListener(onClicked);
   }
   else if (chrome.contextMenus) {
-    chrome.contextMenus.remove('inspect');
+    chrome.contextMenus.remove('inspect-image', () => chrome.runtime.lastError);
+  }
+
+  if (prefs['link-context-menu']) {
+    chrome.contextMenus.create({
+      title: 'Inspect Metadata (link)',
+      id: 'inspect-link',
+      contexts: ['link']
+    }, () => chrome.runtime.lastError);
+
     chrome.contextMenus.onClicked.removeListener(onClicked);
+    chrome.contextMenus.onClicked.addListener(onClicked);
+  }
+  else if (chrome.contextMenus) {
+    chrome.contextMenus.remove('inspect-link', () => chrome.runtime.lastError);
   }
 });
 chrome.runtime.onStartup.addListener(build);
