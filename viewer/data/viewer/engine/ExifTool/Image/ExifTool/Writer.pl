@@ -76,6 +76,8 @@ my %jpegMap = (
     MetaIFD      => 'Meta',
     RMETA        => 'APP5',
     SEAL         => ['APP8','APP9'], # (note: add 'IFD0' if this is a possibility)
+    AROT         => 'APP10',
+    JUMBF        => 'APP11',
     Ducky        => 'APP12',
     Photoshop    => 'APP13',
     Adobe        => 'APP14',
@@ -138,11 +140,12 @@ my %rawType = (
 # 2) any dependencies must be added to %excludeGroups
 my @delGroups = qw(
     Adobe AFCP APP0 APP1 APP2 APP3 APP4 APP5 APP6 APP7 APP8 APP9 APP10 APP11 APP12
-    APP13 APP14 APP15 CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix FotoStation
-    GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC ItemList JFIF
-    Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft MIE MPF Nextbase NikonApp
-    NikonCapture PDF PDF-update PhotoMechanic Photoshop PNG PNG-pHYs PrintIM
-    QuickTime RMETA RSRC SEAL SubIFD Trailer UserData XML XML-* XMP XMP-*
+    APP13 APP14 APP15 AROT AudioKeys CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
+    FotoStation GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC
+    ItemList iTunes JFIF Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft MIE
+    MPF Nextbase NikonApp NikonCapture PDF PDF-update PhotoMechanic Photoshop PNG
+    PNG-pHYs PrintIM QuickTime RMETA RSRC SEAL SubIFD Trailer UserData VideoKeys
+    Vivo XML XML-* XMP XMP-*
 );
 # family 2 group names that we can delete
 my @delGroup2 = qw(
@@ -1295,12 +1298,13 @@ sub SetNewValuesFromFile($$;@)
         # ! option to decide how it is handled here. !
         # +------------------------------------------+
         foreach (qw(ByteUnit Charset CharsetEXIF CharsetFileName CharsetID3 CharsetIPTC
-                    CharsetPhotoshop Composite DateFormat Debug EncodeHangs Escape ExtendedXMP
-                    ExtractEmbedded FastScan Filter FixBase Geolocation GeolocAltNames
-                    GeolocFeature GeolocMinPop GeolocMaxDist GlobalTimeShift HexTagIDs
-                    IgnoreGroups IgnoreMinorErrors IgnoreTags ImageHashType Lang
-                    LargeFileSupport LigoGPSScale ListItem ListSep MDItemTags MissingTagValue
-                    NoPDFList NoWarning Password PrintConv QuickTimeUTC RequestTags SaveFormat
+                    CharsetPhotoshop Composite DateFormat Debug EncodeHangs Escape
+                    ExtendedXMP ExtractEmbedded FastScan Filter FixBase Geolocation
+                    GeolocAltNames GeolocFeature GeolocMinPop GeolocMaxDist
+                    GlobalTimeShift GPSQuadrant HexTagIDs IgnoreGroups IgnoreMinorErrors
+                    IgnoreTags ImageHashType KeepUTCTime Lang LargeFileSupport
+                    LigoGPSScale ListItem ListSep MDItemTags MissingTagValue NoPDFList
+                    NoWarning Password PrintConv QuickTimeUTC RequestTags SaveFormat
                     SavePath ScanForXMP StructFormat SystemTags TimeZone Unknown UserParam
                     Validate WindowsLongPath WindowsWideFile XAttrTags XMPAutoConv))
         {
@@ -1602,6 +1606,8 @@ SET:    foreach $set (@setList) {
             $$opts{Group} = $dstGrp if $dstGrp;
             my @rtnVals = $self->SetNewValue($dstTag, $val, %$opts);
             $rtnInfo{$dstTag} = $val if $rtnVals[0]; # tag was set successfully
+            # return warning if any
+            $rtnInfo{NextFreeTagKey(\%rtnInfo, 'Warning')} = $rtnVals[1] if $rtnVals[1];
             next;
         }
         foreach $tag (@{$setMatches{$set}}) {
@@ -2822,7 +2828,10 @@ sub GetAllGroups($;$)
 
     my %allGroups;
     # add family 1 groups not in tables
-    $family == 1 and map { $allGroups{$_} = 1 } qw(Garmin);
+    no warnings; # (avoid "possible attempt to put comments in qw()")
+    $family == 1 and map { $allGroups{$_} = 1 } qw(Garmin AudioItemList AudioUserData
+        VideoItemList VideoUserData Track#Keys Track#ItemList Track#UserData);
+    use warnings;
     # loop through all tag tables and get all group names
     while (@tableNames) {
         my $table = GetTagTable(pop @tableNames);
@@ -2851,7 +2860,7 @@ sub GetAllGroups($;$)
         }
     }
     delete $allGroups{'*'};     # (not a real group)
-    return sort keys %allGroups;
+    return sort { lc $a cmp lc $b } keys %allGroups;
 }
 
 #------------------------------------------------------------------------------
@@ -2869,7 +2878,7 @@ sub GetNewGroups($)
 # Returns: List of group names (sorted alphabetically)
 sub GetDeleteGroups()
 {
-    return sort @delGroups, @delGroup2;
+    return sort { lc $a cmp lc $b } @delGroups, @delGroup2;
 }
 
 #------------------------------------------------------------------------------
@@ -3335,7 +3344,8 @@ sub InsertTagValues($$;$$$$)
                 } elsif ($tag eq 'self') {
                     $val = $et; # ("$self{var}" or "$file1:self{var}" in string)
                 } else {
-                    # get the tag value
+                    # get the tag value (note: this direct access allows excluded tags
+                    # to be accessed if the case is correct and a group name is not used)
                     $val = $et->GetValue($tag, $type);
                     unless (defined $val) {
                         # check for tag name with different case
@@ -4256,9 +4266,11 @@ sub WriteDirectory($$$;$)
         if ($permanentDir{$grp0} and not ($$dirInfo{TagInfo} and $$dirInfo{TagInfo}{Deletable})) {
             undef $delFlag;
         }
-        # (never delete an entire QuickTime group)
         if ($delFlag) {
-            if (($grp0 =~ /^(MakerNotes)$/ or $grp1 =~ /^(IFD0|ExifIFD|MakerNotes)$/) and
+            if ($$dirInfo{Permanent}) {
+                $self->Warn("Not deleting permanent $dirName directory");
+                undef $grp1;
+            } elsif (($grp0 =~ /^(MakerNotes)$/ or $grp1 =~ /^(IFD0|ExifIFD|MakerNotes)$/) and
                 $self->IsRawType() and
                 # allow non-permanent MakerNote directories to be deleted (ie. NikonCapture)
                 (not $$dirInfo{TagInfo} or not defined $$dirInfo{TagInfo}{Permanent} or
@@ -5038,7 +5050,6 @@ TryLib: for ($lib=$strptimeLib; ; $lib='') {
                 last;
             }
             if (not $lib) {
-                last unless $$self{OPTIONS}{StrictDate};
                 warn $wrn || "Install POSIX::strptime or Time::Piece for inverse date/time conversions\n";
                 return undef;
             } elsif ($lib eq 'POSIX::strptime') {
@@ -5228,7 +5239,7 @@ sub Set64u(@)
 {
     my $val = $_[0];
     my $hi = int($val / 4294967296);
-    my $lo = Set32u($val - $hi * 4294967296);
+    my $lo = Set32u($val - $hi * 4294967296); # NOTE: subject to round-off errors!
     $hi = Set32u($hi);
     $val = GetByteOrder() eq 'MM' ? $hi . $lo : $lo . $hi;
     $_[1] and substr(${$_[1]}, $_[2], length($val)) = $val;
@@ -5729,6 +5740,8 @@ sub WriteJPEG($$)
                     $s =~ /^(Meta|META|Exif)\0\0/ and $dirName = 'Meta';
                 } elsif ($marker == 0xe5) {
                     $s =~ /^RMETA\0/        and $dirName = 'RMETA';
+                } elsif ($marker == 0xea) {
+                    $s =~ /^AROT\0\0/       and $dirName = 'AROT';
                 } elsif ($marker == 0xeb) {
                     $s =~ /^JP/             and $dirName = 'JUMBF';
                 } elsif ($marker == 0xec) {
@@ -6021,7 +6034,7 @@ sub WriteJPEG($$)
             Write($outfile, $hdr, $s, $segData) or $err = 1;
             my ($buff, $endPos, $trailInfo);
             my $delPreview = $$self{DEL_PREVIEW};
-            $trailInfo = IdentifyTrailer($raf) unless $$delGroup{Trailer};
+            $trailInfo = $self->IdentifyTrailer($raf) unless $$delGroup{Trailer};
             my $nvTrail = $self->GetNewValueHash($Image::ExifTool::Extra{Trailer});
             unless ($oldOutfile or $delPreview or $trailInfo or $$delGroup{Trailer} or $nvTrail or
                 $$self{HiddenData})
@@ -6102,7 +6115,7 @@ sub WriteJPEG($$)
                 my $tbuf = '';
                 $raf->Seek(-length($buff), 1);  # seek back to just after EOI
                 $$trailInfo{OutFile} = \$tbuf;  # rewrite the trailer
-                $$trailInfo{ScanForAFCP} = 1;   # scan if necessary
+                $$trailInfo{ScanForTrailer} = 1;# scan if necessary
                 $self->ProcessTrailers($trailInfo) or undef $trailInfo;
             }
             if (not $oldOutfile) {
@@ -6637,7 +6650,12 @@ sub WriteJPEG($$)
                     $segType = 'SEAL';
                     $$delGroup{SEAL} and $del = 1;
                 }
-            } elsif ($marker == 0xeb) {         # APP10 (JUMBF)
+            } elsif ($marker == 0xea) {         # APP10 (AROT)
+                if ($$segDataPt =~ /^AROT\0\0/) {
+                    $segType = 'AROT';
+                    $$delGroup{AROT} and $del = 1;
+                }
+            } elsif ($marker == 0xeb) {         # APP11 (JUMBF)
                 if ($$segDataPt =~ /^JP/) {
                     $segType = 'JUMBF';
                     $$delGroup{JUMBF} and $del = 1;
@@ -6987,7 +7005,7 @@ sub SetFileTime($$;$$$$)
                 $mtime = $m unless defined $mtime;
                 $success = eval { utime($atime, $mtime, $file) } if defined $atime and defined $mtime;
             }
-            $self->Warn('Error opening file for update') unless $success;
+            $self->Warn('Error updating file time') unless $success;
             return $success;
         }
         $saveFile = $file;
@@ -7376,7 +7394,7 @@ used routines.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

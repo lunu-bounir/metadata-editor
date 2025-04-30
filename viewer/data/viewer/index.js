@@ -4,6 +4,19 @@
 
 const args = new URLSearchParams(location.search);
 const exiftool = new ExifTool();
+exiftool.report = o => {
+  let msg = `Downloading ${o.href}`;
+  document.title = msg;
+
+  if (o.contentLength) {
+    const progress = (o.receivedLength / parseInt(o.contentLength)) * 100;
+    msg += ' (' + progress.toFixed(2) + '%)...';
+  }
+  else {
+    msg += ' ' + o.receivedLength + ' bytes...';
+  }
+  document.getElementById('files').dataset.msg = msg;
+};
 
 const explore = file => exiftool.ready().then(async () => {
   const raw = await exiftool.execute(`
@@ -26,6 +39,10 @@ const explore = file => exiftool.ready().then(async () => {
     }
     return join('|||', @r);
   `);
+  if (!raw) {
+    throw Error('Engine is corrupted. Refreshing this page...');
+  }
+
   const r = raw.split('|||');
 
   const {deletableGroups, writableTags} = await fetch('const.json').then(r => r.json());
@@ -52,10 +69,7 @@ const explore = file => exiftool.ready().then(async () => {
   }
   return groups;
 }).catch(e => {
-  console.error(e);
   exiftool.delete(file);
-  alert(`The "${file.name}" file is not supported.\n\n--\n` + e.message);
-  location.reload();
   throw e;
 });
 
@@ -95,17 +109,39 @@ const insert = (file, groups) => {
 
 const next = async files => {
   document.getElementById('files').dataset.msg = 'Please wait while loading resources...';
-
-  const v = await exiftool.upload(files);
+  const v = await exiftool.upload(files).catch(e => e.message);
   if (v === true) {
     for (const file of files) {
-      const meta = await explore(file);
-      insert(file, meta);
+      document.title = 'Working on ' + file.name;
+      try {
+        const meta = await explore(file);
+        insert(file, meta);
+      }
+      catch (e) {
+        console.error(e);
+        const msg = `Cannot read meta information from "${file.name}" file.\n\n--\nError: ` + e.message;
+        document.getElementById('files').dataset.msg = msg;
+
+        const ef = document.importNode(document.getElementById('file').content, true);
+        ef.querySelector('h2').textContent = file.name + ' (Failed)';
+        const pre = document.createElement('pre');
+        pre.textContent = msg;
+        ef.querySelector('.groups').append(pre);
+        document.getElementById('files').append(ef);
+
+
+        // Engine is dead. Refresh the page
+        if (e.message.includes('Perl exited with exit status')) {
+          location.replace(location.href.split('?')[0]);
+        }
+      }
     }
+    document.title = chrome.runtime.getManifest().name;
     await exiftool.umount();
   }
   else {
-    alert('Something went wrong: ' + v);
+    const msg = 'Something went wrong\n\n--\nError: ' + v;
+    document.getElementById('files').dataset.msg = msg;
   }
 };
 
@@ -124,7 +160,29 @@ document.addEventListener('click', e => {
 document.ondragover = e => e.preventDefault();
 document.ondrop = e => {
   e.preventDefault();
-  next(e.dataTransfer.files);
+  const entries = [...e.dataTransfer.items].map(o => o.webkitGetAsEntry());
+  const files = [];
+
+  const dir = entry => {
+    const reader = entry.createReader();
+    return new Promise(resolve => reader.readEntries(resolve));
+  };
+
+  const add = async entries => {
+    for (const entry of entries) {
+      if (entry.isFile) {
+        const file = await new Promise(resolve => {
+          entry.file(resolve);
+        });
+        files.push(file);
+      }
+      else {
+        return add(await dir(entry));
+      }
+    }
+  };
+
+  add(entries).then(() => next(files));
 };
 
 exiftool.ready().then(async () => {

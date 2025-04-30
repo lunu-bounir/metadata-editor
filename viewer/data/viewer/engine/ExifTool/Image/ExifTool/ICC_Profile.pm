@@ -336,6 +336,7 @@ my %manuSig = ( #6
     'Zebr' => 'Zebra Technologies Inc',
     'ZRAN' => 'Zoran Corporation',
     # also seen: "    ",ACMS,KCMS,UCCM,etc2,SCTX
+    # registry: https://www.color.org/signatureRegistry/index.xalter
 );
 
 # ICC_Profile tag table
@@ -1436,7 +1437,7 @@ data created on one device into another device's native color space.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

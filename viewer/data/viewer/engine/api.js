@@ -21,11 +21,13 @@ worker.onMessage = [];
 class ExifTool {
   waitings = [];
   #resolves = {};
+  #rejects = {};
 
   #post(o) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       const id = Math.random();
       this.#resolves[id] = resolve;
+      this.#rejects[id] = reject;
       worker.postMessage({
         ...o,
         id
@@ -33,11 +35,24 @@ class ExifTool {
     });
   }
 
+  report(o) {
+    console.info('[api]', o);
+  }
   constructor() {
     worker.onMessage.push(request => {
       if (request.id in this.#resolves) {
-        this.#resolves[request.id](request.response);
+        if (request.type === 'report') {
+          this.report(request);
+          return;
+        }
+        if (request.error) {
+          this.#rejects[request.id](Error(request.error));
+        }
+        else {
+          this.#resolves[request.id](request.response);
+        }
         delete this.#resolves[request.id];
+        delete this.#rejects[request.id];
       }
     });
   }
@@ -51,6 +66,12 @@ class ExifTool {
     return this.#post({
       cmd: 'upload',
       files
+    });
+  }
+  delete(file) {
+    return this.#post({
+      filename: file.name,
+      cmd: 'delete'
     });
   }
   umount() {

@@ -1,7 +1,7 @@
 {
   "name": "Exif Metadata Viewer",
   "description": "Read meta information of audio, video, image, PDF, and many more files (powered by ExifTool)",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "manifest_version": 3,
   "permissions": [
     "storage"
@@ -14,27 +14,34 @@
   ],
   "homepage_url": "https://webextension.org/listing/metadata-viewer.html",
   "background": {
-    "service_worker": "worker.js"
+    "service_worker": "worker.js",
+    "scripts": ["worker.js"]
   },
   "action": {
     "default_title": "Open the Metadata Editor"
   },
   "icons": {
-    "16": "/data/icons/16.png",
-    "32": "/data/icons/32.png",
-    "48": "/data/icons/48.png",
-    "64": "/data/icons/64.png",
-    "128": "/data/icons/128.png",
-    "256": "/data/icons/256.png",
-    "512": "/data/icons/512.png"
+    "16": "data/icons/16.png",
+    "32": "data/icons/32.png",
+    "48": "data/icons/48.png",
+    "64": "data/icons/64.png",
+    "128": "data/icons/128.png",
+    "256": "data/icons/256.png",
+    "512": "data/icons/512.png"
   },
   "options_ui": {
-    "page": "/data/options/index.html"
+    "page": "data/options/index.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "commands": {
     "_execute_action": {}
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{efcce7e5-8c19-47ab-b88c-4ed941334cb0}",
+      "strict_min_version": "128.0"
+    }
   }
 }

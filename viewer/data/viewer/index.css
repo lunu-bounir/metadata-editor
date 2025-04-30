@@ -18,15 +18,22 @@ h2 {
   background-color: var(--green);
   padding: var(--gap);
   text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+#files {
+  .file {
+    overflow: auto;
+  }
+}
 #files:empty::before {
   content: attr(data-msg);
   position: absolute;
   inset: 0;
   display: grid;
   place-content: center;
-  font-size: max(1rem, min(4vw, 1.5rem));
+  font-size: 20px;
   overflow: hidden;
   background-color: #fffbf3;
   padding: 10px;
@@ -52,6 +59,8 @@ h2 {
 }
 .tags .d2 {
   white-space: break-spaces;
+  overflow: hidden;
+  word-wrap: break-word;
 }
 .tags .d3 {
   justify-self: end;

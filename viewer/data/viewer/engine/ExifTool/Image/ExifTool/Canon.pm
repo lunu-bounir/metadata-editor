@@ -88,7 +88,7 @@ sub ProcessCTMD($$$);
 sub ProcessExifInfo($$$);
 sub SwapWords($);
 
-$VERSION = '4.86';
+$VERSION = '4.90';
 
 # Note: Removed 'USM' from 'L' lenses since it is redundant - PH
 # (or is it?  Ref 32 shows 5 non-USM L-type lenses)
@@ -527,7 +527,8 @@ $VERSION = '4.86';
     748 => 'Canon EF 100-400mm f/4.5-5.6L IS II USM + 1.4x or Tamron Lens', #JR (1.4x Mk III)
     748.1 => 'Tamron 100-400mm f/4.5-6.3 Di VC USD A035E + 1.4x', #IB
     748.2 => 'Tamron 70-210mm f/4 Di VC USD (A034) + 2x', #IB
-    749 => 'Tamron 100-400mm f/4.5-6.3 Di VC USD A035E + 2x', #IB
+    749 => 'Canon EF 100-400mm f/4.5-5.6L IS II USM + 2x or Tamron Lens', #PH
+    749.1 => 'Tamron 100-400mm f/4.5-6.3 Di VC USD A035E + 2x', #IB
     750 => 'Canon EF 35mm f/1.4L II USM or Tamron Lens', #42
     750.1 => 'Tamron SP 85mm f/1.8 Di VC USD (F016)', #Exiv2#1072
     750.2 => 'Tamron SP 45mm f/1.8 Di VC USD (F013)', #PH
@@ -632,8 +633,11 @@ $VERSION = '4.86';
    '61182.55' => 'Canon RF-S 10-18mm F4.5-6.3 IS STM', #42
    '61182.56' => 'Canon RF 35mm F1.4 L VCM', #42
    '61182.57' => 'Canon RF 70-200mm F2.8 L IS USM Z', #42
-   '61182.58' => 'Canon RF 50mm F1.4 L VCM', #42
-   '61182.59' => 'Canon RF 24mm F1.4 L VCM', #42
+   '61182.58' => 'Canon RF 70-200mm F2.8 L IS USM Z + RF1.4x', #42
+   '61182.59' => 'Canon RF 70-200mm F2.8 L IS USM Z + RF2x', #42
+   '61182.60' => 'Canon RF 16-28mm F2.8 IS STM', #42
+   '61182.61' => 'Canon RF 50mm F1.4 L VCM', #42
+   '61182.62' => 'Canon RF 24mm F1.4 L VCM', #42
     65535 => 'n/a',
 );
 
@@ -1406,7 +1410,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         },
         {
             Name => 'CanonCameraInfoR6m2',
-            Condition => '$$self{Model} =~ /\bEOS R6m2$/',
+            Condition => '$$self{Model} =~ /\bEOS (R6m2|R8|R50)$/',
             SubDirectory => { TagTable => 'Image::ExifTool::Canon::CameraInfoR6m2' },
         },
         {
@@ -2049,7 +2053,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
     # 0x4014 (similar to 0x83?)
     0x4015 => [{
         Name => 'VignettingCorr', # (LensPacket)
-        Condition => '$$valPt =~ /^\0/ and $$valPt !~ /^\0\0\0\0/', # (data may be all zeros for 60D)
+        Condition => '$$valPt =~ /^\0/ and $$valPt !~ /^(\0\0\0\0|\x00\x40\xdc\x05)/', # (data may be all zeros for 60D)
         SubDirectory => {
             # (the size word is at byte 2 in this structure)
             Validate => 'Image::ExifTool::Canon::Validate($dirData,$subdirStart+2,$size)',
@@ -2057,7 +2061,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         },
     },{
         Name => 'VignettingCorrUnknown1',
-        Condition => '$$valPt =~ /^[\x01\x02\x10\x20]/ and $$valPt !~ /^\0\0\0\0/',
+        Condition => '$$valPt =~ /^[\x01\x02\x10\x20]/ and $$valPt !~ /^(\0\0\0\0|\x02\x50\x7c\x04)/',
         SubDirectory => {
             # (the size word is at byte 2 in this structure)
             Validate => 'Image::ExifTool::Canon::Validate($dirData,$subdirStart+2,$size)',
@@ -4754,6 +4758,7 @@ my %ciMaxFocal = (
         Format => 'int32u',
         Notes => 'includes electronic + mechanical shutter',
     },
+    # 0x0b5a - related to image stabilization (ref forum17239) (R5)
     # 0x0bb7 - counts down during focus stack (ref forum16111)
 );
 
@@ -7023,6 +7028,9 @@ my %ciMaxFocal = (
             317 => 'Canon RF-S 3.9mm F3.5 STM DUAL FISHEYE', #42
             318 => 'Canon RF 28-70mm F2.8 IS STM', #42
             319 => 'Canon RF 70-200mm F2.8 L IS USM Z', #42
+            320 => 'Canon RF 70-200mm F2.8 L IS USM Z + RF1.4x', #42
+            321 => 'Canon RF 70-200mm F2.8 L IS USM Z + RF2x', #42
+            323 => 'Canon RF 16-28mm F2.8 IS STM', #42
             325 => 'Canon RF 50mm F1.4 L VCM', #42
             326 => 'Canon RF 24mm F1.4 L VCM', #42
             # Note: add new RF lenses to %canonLensTypes with ID 61182
@@ -10591,7 +10599,7 @@ Canon maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

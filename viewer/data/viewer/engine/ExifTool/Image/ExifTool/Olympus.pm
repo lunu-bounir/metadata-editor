@@ -40,7 +40,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::APP12;
 
-$VERSION = '2.83';
+$VERSION = '2.85';
 
 sub PrintLensInfo($$$);
 
@@ -113,7 +113,7 @@ my %olympusLensTypes = (
     '0 34 00' => 'Olympus Zuiko Digital ED 9-18mm F4.0-5.6', #7
     '0 34 10' => 'Olympus M.Zuiko Digital ED 12-45mm F4.0 Pro', #IB
     '0 35 00' => 'Olympus Zuiko Digital 14-54mm F2.8-3.5 II', #PH
-    '0 35 10' => 'Olympus M.Zuiko 100-400mm F5.0-6.3', #IB
+    '0 35 10' => 'Olympus M.Zuiko 100-400mm F5.0-6.3', #IB (also OM System M.Zuiko Digital ED 100-400mm F5.0-6.3 IS II", forum2833)
     '0 36 10' => 'Olympus M.Zuiko Digital ED 8-25mm F4 Pro', #IB
     '0 37 10' => 'Olympus M.Zuiko Digital ED 40-150mm F4.0 Pro', #forum3833
     '0 39 10' => 'Olympus M.Zuiko Digital ED 90mm F3.5 Macro IS Pro', #forum3833
@@ -442,9 +442,11 @@ my %olympusCameraTypes = (
     S0089 => 'E-M5MarkIII',
     S0092 => 'E-M1MarkIII', #IB
     S0093 => 'E-P7', #IB
+    S0094 => 'E-M10MarkIIIS', #forum17050
     S0095 => 'OM-1', #IB
     S0101 => 'OM-5', #IB
     S0121 => 'OM-1MarkII', #forum15652
+    S0123 => 'OM-3', #forum17208
     SR45 => 'D220',
     SR55 => 'D320L',
     SR83 => 'D340L',
@@ -4194,7 +4196,7 @@ Olympus or Epson maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
