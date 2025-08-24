@@ -109,6 +109,7 @@ Perl.init(() => {
     'Image/ExifTool/Torrent.pm',
     'Image/ExifTool/Reconyx.pm',
     'Image/ExifTool/PanasonicRaw.pm',
+    'Image/ExifTool/TNEF.pm',
     'Image/ExifTool/Geotag.pm',
     'Image/ExifTool/Leaf.pm',
     'Image/ExifTool/Sigma.pm',

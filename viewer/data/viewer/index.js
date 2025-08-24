@@ -20,51 +20,92 @@ exiftool.report = o => {
 
 const explore = file => exiftool.ready().then(async () => {
   const raw = await exiftool.execute(`
-    my $exifTool = Image::ExifTool->new;
-    $exifTool->ExtractInfo("/work/${file.name}");
-    my @groups = $exifTool->GetGroups();
+use strict;
+use warnings;
+use Image::ExifTool;
 
-    my @r = ();
-    foreach my $group (@groups) {
-      my $writable = grep { $_ eq $group } @deleteGroups;
-      push(@r, "[G]$group");
+my $exifTool = Image::ExifTool->new;
 
-      my $info = $exifTool->GetInfo({"Group" => $group});
-      my @tags = $exifTool->GetTagList($info);
-      foreach my $tag (@tags) {
-        my $name = $exifTool->GetDescription($tag);
-        my $value = $exifTool->GetValue($tag);
-        push(@r, "[T]$tag---$name---$value");
-      }
+# Set options to extract all metadata, including ICC profile tags
+$exifTool->Options(
+    Unknown => 1,         # Include unknown tags
+    Binary => 1,          # Include binary data
+    ExtractEmbedded => 1, # Extract embedded metadata
+    Charset => 'UTF8',    # Handle UTF-8 encoding for tag names/values
+    Lang => 'en',         # Force English for tag descriptions
+);
+
+# Extract metadata from the file
+$exifTool->ExtractInfo("/work/${file.name}") or die "Failed to extract info: $!";
+
+my @r;
+
+# Get all found tags, including ICC profile tags
+foreach my $tag ($exifTool->GetFoundTags('Main')) {
+    my $group = $exifTool->GetGroup($tag, 1); # Get group name (e.g., ICC_Profile)
+    my $name  = $exifTool->GetDescription($tag) || $tag; # Use description or tag name
+    my $value;
+
+    # Use raw value for specific ICC profile tags to avoid missing them
+    if ($group eq 'ICC_Profile' && ($tag eq 'desc' || $name =~ /Profile Description/)) {
+        $value = $exifTool->GetValue($tag, 'ValueConv'); # Raw value for ICC profile description
+        # Handle multi-language description tags
+        if (defined $value && ref $value eq 'HASH') {
+            $value = $value->{en} || join(', ', values %$value); # Extract English or all values
+        }
+    } else {
+        # Use human-readable value for other tags
+        $value = $exifTool->GetValue($tag, 'PrintConv');
+        # Fallback to raw value if PrintConv is undefined
+        $value = $exifTool->GetValue($tag, 'ValueConv') if !defined $value;
     }
-    return join('|||', @r);
+
+    # Handle binary or non-printable data
+    if (defined $value) {
+        if (ref $value eq '' && $value =~ /[^\x20-\x7E]/ && $group ne 'ICC_Profile') {
+            $value = unpack('H*', $value);
+            $value = "Binary data (hex: $value)";
+        }
+        push @r, "[G]$group [T]$tag---$name---$value";
+    }
+}
+
+# Join results with delimiter
+return join('|||', @r);
   `);
   if (!raw) {
     throw Error('Engine is corrupted. Refreshing this page...');
   }
 
+
   const r = raw.split('|||');
+  const regex = /^\[G\](.*?) \[T\](.*?)---(.*?)---(.*)$/;
 
   const {deletableGroups, writableTags} = await fetch('const.json').then(r => r.json());
 
   const groups = new Map();
-  let tags;
   for (const line of r) {
     if (line.startsWith('[G]')) {
-      tags = new Map();
-      const group = line.slice(3);
-      groups.set(group, {
-        writable: deletableGroups.includes(group),
-        tags
-      });
-    }
-    else {
-      const [tag, name, value] = line.slice(3).split('---');
-      tags.set(tag, {
-        name,
-        value,
-        writable: writableTags.includes(tag)
-      });
+      const match = line.match(regex);
+      if (match) {
+        const [, group, tag, name, value] = match;
+        if (groups.has(group) === false) {
+          groups.set(group, {
+            writable: deletableGroups.includes(group),
+            tags: new Map()
+          });
+        }
+        if (['Directory', 'FilePermissions', 'FileModifyDate', 'FileAccessDate', 'FileInodeChangeDate'].includes(tag)) {
+          continue;
+        }
+        console.log(tag);
+        const tags = groups.get(group).tags;
+        tags.set(tag, {
+          name,
+          value,
+          writable: writableTags.includes(tag)
+        });
+      }
     }
   }
   return groups;
