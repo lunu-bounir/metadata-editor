@@ -2,7 +2,7 @@
 
 // polyfill to run webperl in worker
 self.window = self;
-self.alert = e => console.log(e);
+self.alert = e => console.info('[error]', e);
 self.document = {
   getElementsByTagName() {
     return [{
@@ -95,6 +95,7 @@ Perl.init(() => {
     'Image/ExifTool/AFCP.pm',
     'Image/ExifTool/FotoStation.pm',
     'Image/ExifTool/HTML.pm',
+    'Image/ExifTool/DSF.pm',
     'Image/ExifTool/BigTIFF.pm',
     'Image/ExifTool/CaptureOne.pm',
     'Image/ExifTool/EXE.pm',
@@ -125,6 +126,7 @@ Perl.init(() => {
     'Image/ExifTool/Font.pm',
     'Image/ExifTool/FLIR.pm',
     'Image/ExifTool/SonyIDC.pm',
+    'Image/ExifTool/Google.pm',
     'Image/ExifTool/CanonRaw.pm',
     'Image/ExifTool/WritePhotoshop.pl',
     'Image/ExifTool/Other.pm',
@@ -137,6 +139,7 @@ Perl.init(() => {
     'Image/ExifTool/README',
     'Image/ExifTool/GM.pm',
     'Image/ExifTool/Exif.pm',
+    'Image/ExifTool/WavPack.pm',
     'Image/ExifTool/WritePDF.pl',
     'Image/ExifTool/DV.pm',
     'Image/ExifTool/Motorola.pm',
@@ -186,6 +189,7 @@ Perl.init(() => {
     'Image/ExifTool/SigmaRaw.pm',
     'Image/ExifTool/HP.pm',
     'Image/ExifTool/Text.pm',
+    'Image/ExifTool/Kandao.pm',
     'Image/ExifTool/Parrot.pm',
     'Image/ExifTool/Writer.pl',
     'Image/ExifTool/ID3.pm',
@@ -276,7 +280,8 @@ Perl.init(() => {
     'Image/ExifTool/MinoltaRaw.pm',
     'Image/ExifTool/JSON.pm',
     'Image/ExifTool.pod',
-    'Image/ExifTool.pm'
+    'Image/ExifTool.pm',
+    'JSON.pm'
   ];
   for (const v of names) {
     const p = v.split('/');
@@ -308,6 +313,7 @@ self.onmessage = async e => {
       });
     }
     catch (e) {
+      console.error('[worker]', e);
       self.postMessage({
         id: request.id,
         error: e.message

@@ -1,21 +1,37 @@
-const worker = new Worker('engine/worker.js');
-worker.onmessage = e => {
-  const request = e.data;
-
-  if (request.cmd === 'ready') {
-    worker.ready = true;
-
-    for (const c of worker.onReady) {
-      c();
-    }
-    worker.onReady.length = 0;
-  }
-  for (const c of worker.onMessage) {
-    c(request);
-  }
+const worker = {
+  onReady: [],
+  onMessage: []
 };
-worker.onReady = [];
-worker.onMessage = [];
+{
+  const reset = () => {
+    const w = new Worker('engine/worker.js');
+    worker.post = (...args) => w.postMessage(...args);
+    w.onmessage = onmessage;
+    worker.ready = false;
+  };
+
+  const onmessage = e => {
+    const request = e.data;
+
+    if (request.error) {
+      reset();
+    }
+
+    if (request.cmd === 'ready') {
+      worker.ready = true;
+
+      for (const c of worker.onReady) {
+        c();
+      }
+      worker.onReady.length = 0;
+    }
+    for (const c of worker.onMessage) {
+      c(request);
+    }
+  };
+
+  reset();
+}
 
 // eslint-disable-next-line no-unused-vars
 class ExifTool {
@@ -28,7 +44,7 @@ class ExifTool {
       const id = Math.random();
       this.#resolves[id] = resolve;
       this.#rejects[id] = reject;
-      worker.postMessage({
+      worker.post({
         ...o,
         id
       });

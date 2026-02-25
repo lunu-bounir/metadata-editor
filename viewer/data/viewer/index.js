@@ -18,172 +18,214 @@ exiftool.report = o => {
   document.getElementById('files').dataset.msg = msg;
 };
 
-const explore = file => exiftool.ready().then(async () => {
-  const raw = await exiftool.execute(`
+const explore = (file, scan = 0) => exiftool.ready().then(async () => {
+  const raw = await exiftool.execute(String.raw`
 use strict;
 use warnings;
 use Image::ExifTool;
+use JSON::PP;
+use Scalar::Util qw(looks_like_number reftype);
 
 my $exifTool = Image::ExifTool->new;
 
-# Set options to extract all metadata, including ICC profile tags
+# Extremely conservative settings for WASM safety
 $exifTool->Options(
-    Unknown => 1,         # Include unknown tags
-    Binary => 1,          # Include binary data
-    ExtractEmbedded => 1, # Extract embedded metadata
-    Charset => 'UTF8',    # Handle UTF-8 encoding for tag names/values
-    Lang => 'en',         # Force English for tag descriptions
+    FastScan   => ${scan},          # 0→2 if crashes often
+    Composite  => 1,
+    MakerNotes => 0,
+    PrintConv  => 1,
+    Struct     => 0,
+    Binary     => 0,
+    Charset    => 'UTF8'
 );
 
-# Extract metadata from the file
-$exifTool->ExtractInfo("/work/${file.name}") or die "Failed to extract info: $!";
+my $filename = "/work/${file.name}";
 
-my @r;
+my %grouped;
+my @errors;   # collect per-tag failures
 
-# Get all found tags, including ICC profile tags
-foreach my $tag ($exifTool->GetFoundTags('Main')) {
-    my $group = $exifTool->GetGroup($tag, 1); # Get group name (e.g., ICC_Profile)
-    my $name  = $exifTool->GetDescription($tag) || $tag; # Use description or tag name
-    my $value;
+eval {
+    $exifTool->ExtractInfo($filename);
+};
+if ($@) {
+    return JSON::PP->new->canonical(1)->ascii(1)->encode({
+        error => "File metadata structure incompatible with WASM runtime: $@"
+    });
+}
 
-    # Use raw value for specific ICC profile tags to avoid missing them
-    if ($group eq 'ICC_Profile' && ($tag eq 'desc' || $name =~ /Profile Description/)) {
-        $value = $exifTool->GetValue($tag, 'ValueConv'); # Raw value for ICC profile description
-        # Handle multi-language description tags
-        if (defined $value && ref $value eq 'HASH') {
-            $value = $value->{en} || join(', ', values %$value); # Extract English or all values
+my $info = $exifTool->GetInfo();
+
+foreach my $tag (keys %$info) {
+    my $val = $info->{$tag};
+
+    if (ref($val)) {
+        if (reftype($val) eq 'SCALAR') {
+            # Keep as "SCALAR(0x...)" instead of dereferencing
+            $val = "$val";
+        } else {
+            push @errors, {
+                tag   => $tag,
+                raw   => undef,
+                error => "Unsupported complex reference type: " . ref($val),
+            };
+            next;
         }
-    } else {
-        # Use human-readable value for other tags
-        $value = $exifTool->GetValue($tag, 'PrintConv');
-        # Fallback to raw value if PrintConv is undefined
-        $value = $exifTool->GetValue($tag, 'ValueConv') if !defined $value;
     }
 
-    # Handle binary or non-printable data
-    if (defined $value) {
-        if (ref $value eq '' && $value =~ /[^\x20-\x7E]/ && $group ne 'ICC_Profile') {
-            $value = unpack('H*', $value);
-            $value = "Binary data (hex: $value)";
+    my $safe_val;
+    my $coerce_ok = 0;
+
+    eval {
+        if (defined $val) {
+            if (looks_like_number($val)) {
+                $safe_val = sprintf("%.10g", $val);
+            } else {
+                $safe_val = "" . $val;
+            }
+        } else {
+            $safe_val = "";
         }
-        push @r, "[G]$group [T]$tag---$name---$value";
+        $coerce_ok = 1;
+    };
+
+    if ($coerce_ok) {
+        my $group    = $exifTool->GetGroup($tag, 1) || 'Unknown';
+        my $label    = $exifTool->GetDescription($tag) || $tag;
+        my $instance = $exifTool->GetGroup($tag, 4) || '';
+
+        if ($instance =~ /^Copy(\d+)$/) {
+            $instance = $1;
+        }
+        $label .= " ($instance)" if $instance ne '';
+
+        $grouped{$group}{$tag} = {
+            label => $label,
+            value => $safe_val,
+        };
+    } else {
+        push @errors, {
+            tag   => $tag,
+            raw   => defined $val ? "$val" : undef,
+            error => "$@",
+        };
     }
 }
 
-# Join results with delimiter
-return join('|||', @r);
+my %result = %grouped;
+$result{errors} = \@errors if @errors;
+
+return JSON::PP->new->canonical(1)->ascii(1)->encode(\%result);
   `);
+
   if (!raw) {
     throw Error('Engine is corrupted. Refreshing this page...');
   }
 
+  console.info(JSON.parse(raw));
 
-  const r = raw.split('|||');
-  const regex = /^\[G\](.*?) \[T\](.*?)---(.*?)---(.*)$/;
-
-  const {deletableGroups, writableTags} = await fetch('const.json').then(r => r.json());
-
-  const groups = new Map();
-  for (const line of r) {
-    if (line.startsWith('[G]')) {
-      const match = line.match(regex);
-      if (match) {
-        const [, group, tag, name, value] = match;
-        if (groups.has(group) === false) {
-          groups.set(group, {
-            writable: deletableGroups.includes(group),
-            tags: new Map()
-          });
-        }
-        if (['Directory', 'FilePermissions', 'FileModifyDate', 'FileAccessDate', 'FileInodeChangeDate'].includes(tag)) {
-          continue;
-        }
-        console.log(tag);
-        const tags = groups.get(group).tags;
-        tags.set(tag, {
-          name,
-          value,
-          writable: writableTags.includes(tag)
-        });
-      }
-    }
-  }
-  return groups;
+  return JSON.parse(raw);
 }).catch(e => {
   exiftool.delete(file);
   throw e;
 });
 
-const insert = (file, groups) => {
+const insert = async (file, groups) => {
   const ef = document.importNode(document.getElementById('file').content, true);
   ef.querySelector('h2').textContent = file.name;
 
-  for (const [group, {writable, tags}] of groups.entries()) {
+  const {deletableGroups, writableTags} = await fetch('const.json').then(r => r.json());
+
+
+  for (const [group, entires] of Object.entries(groups)) {
     if (group === 'ExifTool') {
       continue;
     }
 
+    const writable = deletableGroups.includes(group);
     const eg = document.importNode(document.getElementById('group').content, true);
     eg.querySelector('summary').textContent = group + (writable ? '' : ' (readonly)');
 
-    for (const [tag, {writable, name, value}] of tags.entries()) {
+    for (const [tag, o] of Object.entries(entires)) {
       // ignore the "FileSize", "FilePermissions" and "Directory" Tag of the "File" group
-      if (['Directory', 'FileSize', 'FilePermissions'].includes(tag) && group === 'File') {
+      if (['Directory', 'FilePermissions', 'FileAccessDate', 'FileInodeChangeDate', 'FileModifyDate']
+        .includes(tag) && group === 'System') {
         continue;
       }
-
       const et = document.importNode(document.getElementById('tag').content, true);
       const [en, ev, ew] = et.querySelectorAll('span');
-      en.textContent = name;
+      en.textContent = o.label + (o.instance ? ` (${o.instance})` : '');
       en.classList.add('d1');
-      ev.textContent = value;
+      ev.textContent = o.value;
       ev.classList.add('d2');
-      ew.textContent = writable ? '' : '(readonly)';
+      ew.textContent = writableTags.includes(tag) ? '' : '(readonly)';
       ew.classList.add('d3');
       et.querySelector('div').dataset.tag = tag;
       eg.querySelector('div').append(et);
     }
     ef.querySelector('.groups').append(eg);
   }
+
   document.getElementById('files').append(ef);
 };
 
 const next = async files => {
   document.getElementById('files').dataset.msg = 'Please wait while loading resources...';
-  const v = await exiftool.upload(files).catch(e => e.message);
-  if (v === true) {
-    for (const file of files) {
-      document.title = 'Working on ' + file.name;
-      try {
-        const meta = await explore(file);
-        insert(file, meta);
-      }
-      catch (e) {
-        console.error(e);
-        const msg = `Cannot read meta information from "${file.name}" file.\n\n--\nError: ` + e.message;
-        document.getElementById('files').dataset.msg = msg;
 
-        const ef = document.importNode(document.getElementById('file').content, true);
-        ef.querySelector('h2').textContent = file.name + ' (Failed)';
-        const pre = document.createElement('pre');
-        pre.textContent = msg;
-        ef.querySelector('.groups').append(pre);
-        document.getElementById('files').append(ef);
+  for (const file of files) {
+    try {
+      // in case of error, increase the fast scan value
+      for (let scan = 0; ; scan += 1) {
+        try {
+          const v = await exiftool.upload([file]).catch(e => e.message);
+          if (v !== true) {
+            const msg = 'Something went wrong\n\n--\nError: ' + v;
+            document.getElementById('files').dataset.msg = msg;
+            return;
+          }
 
-
-        // Engine is dead. Refresh the page
-        if (e.message.includes('Perl exited with exit status')) {
-          location.replace(location.href.split('?')[0]);
+          document.title = 'Working on ' + file.name;
+          const meta = await explore(file, scan);
+          // add FastScan value to metadata
+          if ('System' in meta) {
+            meta['System']['FastScan'] = {
+              label: 'Fast Scan',
+              value: scan
+            };
+          }
+          insert(file, meta);
+          break;
+        }
+        catch (e) {
+          if (scan < 3) {
+            await exiftool.ready();
+          }
+          else {
+            throw e;
+          }
         }
       }
     }
-    document.title = chrome.runtime.getManifest().name;
-    await exiftool.umount();
+    catch (e) {
+      console.error(e);
+      const msg = `Cannot read meta information from "${file.name}" file.\n\n--\nError: ` + e.message;
+      document.getElementById('files').dataset.msg = msg;
+
+      const ef = document.importNode(document.getElementById('file').content, true);
+      ef.querySelector('h2').textContent = file.name + ' (Failed)';
+      const pre = document.createElement('pre');
+      pre.textContent = msg;
+      ef.querySelector('.groups').append(pre);
+      document.getElementById('files').append(ef);
+
+
+      // Engine is dead. Refresh the page
+      if (e.message.includes('Perl exited with exit status')) {
+        location.replace(location.href.split('?')[0]);
+      }
+    }
   }
-  else {
-    const msg = 'Something went wrong\n\n--\nError: ' + v;
-    document.getElementById('files').dataset.msg = msg;
-  }
+  document.title = chrome.runtime.getManifest().name;
+  await exiftool.umount();
 };
 
 document.getElementById('input').onchange = e => {
