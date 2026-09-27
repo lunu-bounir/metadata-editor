@@ -1,0 +1,206 @@
+:root {
+  --green: #b7fffb;
+  --dark-one: #e4e4e4;
+  --gap: 10px;
+}
+
+html {
+  height: 100vh;
+}
+
+body {
+  font-size: 14px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+  background-color: #fff;
+  color: #4d5156;
+  width: min(100% - 2rem, 70rem);
+  margin-inline: auto;
+}
+input[type=file] {
+  display: none;
+}
+h2 {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group summary {
+  background-color: var(--dark-one);
+  padding-block: var(--gap);
+  padding-left: var(--gap);
+  margin-block: var(--gap);
+  user-select: none;
+}
+.tags {
+  display: grid;
+  grid-template-columns: min-content 1fr min-content;
+  grid-gap: var(--gap);
+}
+.tags .d1 {
+  white-space: nowrap;
+  padding-left: var(--gap);
+}
+.tags .d2 {
+  white-space: break-spaces;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+.tags .d3 {
+  justify-self: end;
+  padding-right: var(--gap);
+}
+.file .header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--green);
+  padding: var(--gap);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.file .header.has-edits {
+  background-color: var(--orange, #ffd27f);
+}
+.file .header h2 {
+  color: #000;
+}
+.file .header .toolbar {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  justify-content: flex-end;
+}
+.file .header .toolbar .save {
+  cursor: pointer;
+  border: 1px solid #0003;
+  border-radius: 3px;
+  padding: calc(var(--gap) / 2) var(--gap);
+  background-color: #fff;
+  font: inherit;
+}
+.file .header .toolbar .save:not(:disabled):hover {
+  box-shadow: 0 0 0 2px var(--green, #b7fffb);
+}
+.file .header .toolbar .save:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.file .header .toolbar .download {
+  padding-block: calc(var(--gap) / 2);
+}
+.file .header .error {
+  position: relative;
+  margin-top: var(--gap);
+  border: 1px solid #d33;
+  border-radius: 3px;
+  background-color: #fff0f0;
+  color: #a00;
+  padding: var(--gap);
+  text-align: center;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+.file .header .error .close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 0;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 6px;
+  cursor: pointer;
+}
+.file .header .error .close:hover {
+  color: #d00;
+}
+.tags .d2.writable {
+  color: var(--editable-fg, blue);
+  cursor: text;
+  border: 1px dashed var(--editable-border, #7aa7ff);
+  border-radius: 3px;
+  padding: 2px 6px;
+  grid-column: 2 / -1;
+}
+.tags .d2.writable:hover {
+  border-style: solid;
+}
+.tags .d2.edited {
+  background-color: var(--orange, #ffd27f);
+}
+.tags .d2 input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  outline: none;
+  background-color: transparent;
+}
+.tags .d2 input:focus {
+  background-color: var(--green, #b7fffb);
+}
+.tags .d2.removed {
+  text-decoration: line-through;
+}
+
+.tag {
+  display: contents;
+}
+.tag:hover {
+  color: blue;
+}
+
+@media screen and (max-width: 500px) {
+  body {
+    width: 100%;
+    margin-inline: 0;
+  }
+  .tags  {
+    grid-template-columns: min-content 1fr;
+  }
+  .tags .d3 {
+    display: none;
+  }
+  .tags .d2.writable {
+    grid-column: auto;
+  }
+}
+
+#working[hidden] {
+  display: none;
+}
+#working {
+  position: fixed;
+  bottom: var(--gap);
+  right: var(--gap);
+  z-index: 3;
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  border: 1px solid #0003;
+  border-radius: 6px;
+  background-color: #fff;
+  padding: calc(var(--gap) / 2) var(--gap);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+#working span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60vw;
+}
+#working button {
+  cursor: pointer;
+  border: 1px solid #0003;
+  border-radius: 3px;
+  padding: calc(var(--gap) / 2) var(--gap);
+  background-color: #fff;
+  font: inherit;
+}
+#working button:hover {
+  box-shadow: 0 0 0 2px var(--green, #b7fffb);
+}

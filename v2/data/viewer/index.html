@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="index.css">
+  <title>Exif Metadata Viewer and Editor</title>
+</head>
+<body>
+  <input type="file" id="input" multiple>
+
+  <template id="group">
+    <details class="group" open>
+      <summary></summary>
+      <div class="tags"></div>
+    </details>
+  </template>
+  <template id="tag">
+    <div class="tag">
+      <span>Name</span>
+      <span>Value</span>
+      <span>Writable</span>
+    </div>
+  </template>
+  <template id="file">
+    <div class="file">
+      <div class="header">
+        <div class="toolbar">
+          <button type="button" class="save" disabled>Apply Changes</button>
+          <a class="download" download hidden>Download It</a>
+        </div>
+        <h2>Filename</h2>
+        <div class="error" hidden></div>
+      </div>
+      <div class="groups"></div>
+    </div>
+  </template>
+
+  <tabs-view id="files" data-msg="Double-Click to add files or drop files or directories to the view
+
+..."></tabs-view>
+
+  <div id="working" hidden>
+    <span></span>
+    <button type="button" id="stop">Stop</button>
+  </div>
+
+  <script type="text/javascript" src="tabs-view.js"></script>
+  <script type="text/javascript" src="engine/api.js"></script>
+  <script type="text/javascript" src="index.js"></script>
+</body>
+</html>
