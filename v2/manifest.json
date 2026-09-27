@@ -1,7 +1,7 @@
 {
   "name": "Exif Metadata Viewer and Editor",
   "description": "Read meta information of audio, video, image, PDF, and many more files and edit them (powered by ExifTool)",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "manifest_version": 3,
   "permissions": [
     "storage"

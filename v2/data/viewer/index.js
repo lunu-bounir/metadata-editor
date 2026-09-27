@@ -278,6 +278,8 @@ const next = async files => {
           }
           catch (e) {
             if (!stopped && scan < 3) {
+              console.log('[explore]', e);
+
               await exiftool.ready();
             }
             else {
